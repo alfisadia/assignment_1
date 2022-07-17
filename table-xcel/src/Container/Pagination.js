@@ -10,7 +10,7 @@ export default ({ todosPerPage, totalTodos, paginate, currentPage }) => {
             <ul className='pagination'>
                 {/* <li className='page-item'>Prev</li> */}
                 {pageNumbers.map(number => (
-                    <li key={number} className='page-item'>
+                    <li key={number} className={`page-item ${currentPage === number ? 'active' : ''}`}>
                         <a onClick={() => paginate(number)} href='!#' className='page-link'>
                             {number}
                         </a>

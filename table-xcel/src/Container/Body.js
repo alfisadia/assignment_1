@@ -5,16 +5,17 @@ import Papa from "papaparse";
 
 export default ({ data }) => {
     const [currentRowList, setCurrentRowList] = useState({});
-    useEffect(()=>{
+    useEffect(() => {
         let initialBatch = {}
-        Object.entries(data).map(([key,value])=>{
-            initialBatch = {...initialBatch, [key]:value[0]}
+        Object.entries(data).map(([key, value]) => {
+            const initRow = value.find((row)=> row.batch === 'All');
+            initialBatch = { ...initialBatch, [key]: initRow }
         })
         setCurrentRowList(initialBatch);
-    },[data])
+    }, [data])
     const handleChange = (e, row) => {
         let filterData = row.find((r) => r.batch === e.target.value);
-        setCurrentRowList({...currentRowList, [row[0].code]:filterData});
+        setCurrentRowList({ ...currentRowList, [row[0].code]: filterData });
     }
     const displayCurrentRow = (dataToBeDisplayed) => {
         return (dataToBeDisplayed && <>
@@ -54,7 +55,7 @@ export default ({ data }) => {
                     {value ? value[0]?.name : ''}
                 </td>
                 <td>
-                    <select name={key} onChange={(e) => handleChange(e, value)}>
+                    <select name={key} value={currentRowList[key]?.batch} onChange={(e) => handleChange(e, value)}>
                         {value && value.map(
                             (column) => {
                                 return (

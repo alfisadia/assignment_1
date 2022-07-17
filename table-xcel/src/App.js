@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 import Body from "./Container/Body";
 import Pagination from './Container/Pagination';
+import moment from 'moment';
 // Allowed extensions for input file
 const allowedExtensions = ["csv"];
 
-const App = () => {
+const App = (props) => {
 
   //#region  //Handeling Import from csv file and parsing it.
 
@@ -69,9 +70,10 @@ const App = () => {
   }
   const Header = (data) => {
     return data.map((column) => {
-      return (<th>
-        {column}
-      </th>)
+      return (
+        <th className="header">
+          {column}
+        </th>)
     })
   }
 
@@ -90,13 +92,67 @@ const App = () => {
     setTodosPerPage(event.target.value);
   }
 
-  useEffect(() => {
+  const constructpaginatedData = (ddData) => {
     let initialBatch = {}
     Object.entries(ddData).slice(indexOfFirstTodo, indexOfLastTodo).map(([key, value]) => {
-      initialBatch = { ...initialBatch, [key]: value }
+      const aggregate = {};
+      value.map((rowValue) => {
+        if (key === rowValue.code) {
+          aggregate.code = rowValue.code;
+          aggregate.name = rowValue.name;
+          aggregate.stock = aggregate.stock ? Number(aggregate.stock) + Number(rowValue.stock) : Number(rowValue.stock);
+          aggregate.mrp = aggregate.mrp ? (Number(aggregate.mrp) < Number(rowValue.mrp) ? rowValue.mrp : aggregate.mrp) : rowValue.mrp;
+          aggregate.rate = aggregate.rate ? (Number(aggregate.rate) < Number(rowValue.rate) ? rowValue.rate : aggregate.rate) : rowValue.rate;
+          aggregate.deal = rowValue.deal;
+          aggregate.free = rowValue.free;
+          aggregate.batch = 'All';
+          aggregate.exp = rowValue.exp;
+          aggregate.company = rowValue.company;
+          aggregate.supplier = rowValue.supplier;
+        }
+      })
+      const newValue = [...value, aggregate];
+      initialBatch = { ...initialBatch, [key]: newValue }
     })
     setCurrentRowList(initialBatch);
-  }, [data, currentPage, todosPerPage])
+  }
+
+  useEffect(() => {
+    constructpaginatedData(ddData);
+  }, [data, ddData, currentPage, todosPerPage])
+  //#endregion
+
+  //#region 
+  const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [paginationLength, setPaginationLength] = useState(10);
+  const handleSearch = (event) => {
+    searchData(search);
+  };
+
+  //Paginate on search
+  useEffect(() => {
+    if (searchResults) {
+      setPaginationLength(Object.keys(searchResults).length)
+    } else {
+      setPaginationLength(Object.keys(ddData).length)
+    }
+  }, [searchResults])
+
+  const searchData = (searchValue) => {
+    const data1 = {};
+    Object.entries(data).map(([key, value]) => {
+      if (value?.name?.toLowerCase().includes(searchValue.toLowerCase())) {
+        if (data1[value.code]) {
+          data1[value.code].push(value)
+        } else {
+          data1[value.code] = [value];
+        }
+      }
+    });
+    constructpaginatedData(data1);
+    setSearchResults(data1);
+  };
   //#endregion
 
   return (
@@ -114,14 +170,20 @@ const App = () => {
         <button onClick={handleParse}>Parse</button>
       </div>
       <div style={{ marginTop: "3rem" }}>
-        <table className="table" border={'1px'}>
+        <input type='text' value={search} onChange={(e) => {
+          if (e.target.value === '') {
+            constructpaginatedData(ddData)
+            setSearchResults(null);
+          }
+          setSearch(e.target.value)
+        }} />
+        <button onClick={handleSearch}>Search by Name</button>
+        <table className="table">
           {Header(columns)}
           {/* {error ? error : <Body data={ddData} />} */}
           {error ? error :
             <Body
               data={currentRowList}
-              currentRowList={currentRowList}
-              setCurrentRowList={setCurrentRowList}
             />}
 
         </table>
@@ -134,7 +196,7 @@ const App = () => {
           <Pagination
             currentPage={currentPage}
             todosPerPage={todosPerPage}
-            totalTodos={Object.keys(ddData).length}
+            totalTodos={paginationLength}
             paginate={paginate}
           />
         </div>
